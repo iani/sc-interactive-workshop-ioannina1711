@@ -1,0 +1,284 @@
+* Workshop 1 - outline
+  :PROPERTIES:
+  :DATE:     <2017-10-28 Σαβ 16:01>
+  :END:
+** Εισαγωγή
+** Στόχοι και περιεχόμενα του Σεμιναρίου
+** Τι είναι το RPI
+** Τι είναι οι αισθητήρες και πως δουλεύουμε με αυτούς
+*** Τι είναι αισθητήρες;
+
+Αισθητήρας είναι μια συσκευή που μετρά φυσικά μεγέθη από το περιβάλλον ετσι ώστε να τα μεταδώσει σαν δεδομένα σε ένα σύστημα επεξεργασίας πληροφορίας.  Μπορούμε να πούμε ότι οι αισθητήρες είναι για τις μήχανές όπως τους υπολογιστές ότι είναι τα αισθητήρια όργανα για τον άνθρωπό ή τα ζώα.
+
+Παραδειγματα;
+
+- Αισθητήρας;
+
+
+*** Γιατί αισθητήρες;
+
+
+
+Physical Computing
+** Practical Demonstration
+*** Get started
+
+#+BEGIN_SRC shell
+ssh pi@raspberrypi.local
+
+jackd -P50 -dalsa -dhw:1 -r44100 -p1024 -n3
+
+# Open new terminal tab or window, then repeat login:
+
+ssh pi@raspberrypi.local
+
+# Open EMACS
+
+emacs &
+
+# in EMACS start supercollider by typing: C-c M-s.
+
+# Open the example files with C-x C-f.
+
+# Start the server with C-c C-p b
+
+#+END_SRC
+*** First sounds
+
+#+BEGIN_SRC sclang
+  //: Simple play of a function as synth
+  // Store the synth in variable a in order to access it later
+  a = { WhiteNoise.ar(0.1) }.play;
+  //: Free the synth stored in a (Means: stop it)
+  a.free;
+  //: Play a function with controls - to change the sound later.
+  a = { | freq = 440 | SinOsc.ar(freq, 0, 0.1) }.play;
+  //: Change the frequency control's value
+  a.set(\freq, 1000);
+  //: Alternative way to create controls, without using arguments (| ... |)
+  b =  { LFSaw.ar(\freq.kr(440), 0, 0.1) }.play;
+  //: Change the frequency control's value
+  b.set(\freq, 1000);
+#+END_SRC
+**** Discussion: storing sound processes in variables
+     :PROPERTIES:
+     :DATE:     <2017-10-29 Κυρ 11:43>
+     :END:
+
+#+BEGIN_SRC sclang
+
+#+END_SRC
+
+*** First sounds using sc-hacks
+
+#+BEGIN_SRC sclang
+  { WhiteNoise.ar(0.1) } +> \test;
+  //:
+  \test.stop;
+  //: One can replace one synth with another one
+  { WhiteNoise.ar(0.1) } +> \test;
+  //:
+  { GrayNoise.ar(0.1) } +> \test;
+#+END_SRC
+*** Cross-Fade between successive synths
+
+#+BEGIN_SRC sclang
+  { WhiteNoise.ar(0.1) } +> \xf;
+  //:
+  { GrayNoise.ar(0.1) } +> \xf;
+  //:
+  { SinOsc.ar(440, 0, 0.1) } +> \xf;
+  //:
+  ~fadeTime = 5;
+  //:
+  { WhiteNoise.ar(0.1) } +> \xf;
+  //:
+  { GrayNoise.ar(0.1) } +> \xf;
+  //:
+  { SinOsc.ar(440, 0, 0.1) } +> \xf;
+#+END_SRC
+
+*** Control by code
+
+#+BEGIN_SRC sclang
+  //: Using symbol.kr as short code for creating the control.
+  { SinOsc.ar(\freq.kr(440), 0, 0.1) } +> \test;
+  //: Now controls of the test player are accessible in the environment:
+  ~freq = 1000 rrand: 2000;
+  //: Control using a pattern
+  (dur: Prand([Pn (0.03, 10), Pn(0.1, 10)], inf), freq: Pwhite(400, 2000)) *> \freq;
+  //: Change the above for a different rhythm and tonality
+  (degree: Pbrown(-10, 0, 0.1)) *> \freq;
+#+END_SRC
+*** Synth Linking
+
+#+BEGIN_SRC sclang
+  //:
+  { WhiteNoise.ar(0.1) } +> \source;
+  //:
+  \source *> \effect;
+  //:
+  { Ringz.ar(In.ar(\in.kr), LFNoise0.ar(10 ! 2).range(40, 90).midicps, mul: 0.05) } +> \effect;
+#+END_SRC
+*** Sound File Playback
+**** V1. Basic playback from list in window
+
+#+BEGIN_SRC sclang
+  Buffer.names;
+  //:
+  Buffer.names.first.b.play;
+  //:
+  \buffers.window({ | w |
+      w.view.layout = VLayout(
+          ListView()
+          .enterKeyAction_({ | me |
+              me.items[me.value].b.play;
+          })
+          .addNotifier(Buffer, \buffers, { | notification |
+              notification.listener.items = Buffer.names;
+          })
+      );
+      Buffer.changed(\buffers)
+  });
+  //:
+
+#+END_SRC
+**** V2. Play with custom func in player
+
+#+BEGIN_SRC sclang
+  //: very simple version
+  { PlayBuf.ar(2, \padattack.b, doneAction: 2)} +> \playbuf;
+  //: use channel number from buffer
+  var buf, numChans;
+  buf = \padattack.b;
+  numChans = buf.numChannels;
+  { PlayBuf.ar(numChans, \padattack.b, doneAction: 2)} +> \playbuf;
+  //:
+  \playbuf.toggle;
+
+#+END_SRC
+**** V3. Toggle from list in window
+
+#+BEGIN_SRC sclang
+  Buffer.names;
+  //:
+  Buffer.names.first.b.play;
+  //:
+  \buffers.window({ | w |
+      w.view.layout = VLayout(
+          ListView()
+          .enterKeyAction_({ | me |
+              Buffer toggle: me.items[me.value];
+          })
+          .addNotifier(Buffer, \buffers, { | notification |
+              notification.listener.items = Buffer.names;
+          })
+      );
+      Buffer.changed(\buffers)
+  });
+  //:
+
+#+END_SRC
+
+*** Granulation
+
+*** Live Coding Example (ported from Youtube / Scratchy)
+    :PROPERTIES:
+    :DATE:     <2017-10-29 Κυρ 13:19>
+    :END:
+
+#+BEGIN_SRC sclang
+  //: make scratchy the current environment.
+  \scratchy.push;
+  //:
+  \freq @.2 \out *> \scratchy;
+  \fadeTime <+.freq 3;
+  //:
+  { DC.ar(50.midicps ! 2) } +> \freq;
+  //:
+  { SinOsc.ar(In.ar(\in.kr(0), 2), 0, 0.1) } +> \scratchy;
+  //:
+  { LFNoise2.ar(30 ! 2).range(40, 50).midicps } +> \freq;
+  //:
+  { LFNoise2.ar(30 ! 2).range(50, 60).midicps } +> \freq;
+  //:
+  \rate *> \freq;
+  //:
+  { LFNoise2.ar(40).range(0.05, 0.9) } +> \rate;
+  //:
+  { LFDNoise3.ar(In.ar(\in.kr)).range(50 ! 2, 60).midicps } +> \freq;
+  //
+  { LFNoise2.ar(40).range(5, 3000) } +> \rate;
+  //:
+  { LFNoise2.ar(40).range(5, 60) } +> \rate;
+  //:
+  { LFNoise2.ar(40).range(5, 100) } +> \rate;
+  //:
+  { LFNoise2.ar(40).range(5, 300) } +> \rate;
+  //:
+  { LFNoise2.ar(40).range(5, 1000) } +> \rate;
+  //:
+  { LFNoise2.ar(40).range(5, 3000) } +> \rate;
+  //:
+
+
+#+END_SRC
+*** Control by OSC (MIDI?)
+*** Patterns and interactive Scores
+**** First steps. And minimalism
+#+BEGIN_SRC sclang
+  (dur: 0.1, degree: Pn(Pseries(0, 1, 8), inf)) +> \scale;
+  //:
+  (dur: 0.1, degree: Pn(Pseries(0, 1, 8), inf)) +> \scale1;
+  (dur: 0.101, degree: Pn(Pseries(0, 1, 8), inf)) +> \scale2;
+  //:
+  (dur: 0.1, degree: Pn(Pseries(0, 1, 8), inf)) +> \scale1;
+  (dur: 0.101, degree: Pn(Pseries(0, 1, 8), inf)) +> \scale2;
+  (dur: 0.102, degree: Pn(Pseries(0, 1, 8), inf)) +> \scale3;
+  (dur: 0.103, degree: Pn(Pseries(0, 1, 8), inf)) +> \scale4;
+  //:
+#+END_SRC
+**** Changing instruments in a pattern;
+
+#+BEGIN_SRC sclang
+  //: Define a new instrument (SynthDef!)
+  SynthDef("windy", {
+      var env, src, filter;
+      env = Env.adsr;
+      src = WhiteNoise.ar(0.1);
+      filter = Ringz.ar(src, \freq.kr(400) * [1, 1.2]);
+      Out.ar(\out.kr, filter * EnvGen.kr(env, \gate.kr(1), \amp.kr(0.1), doneAction: 2));
+  }).add;
+  //: Test;
+  a = Synth(\windy);
+  //:
+  a release: 2;
+  //: Test in an event
+  (instrument: \windy).play;
+  //: Test in pattern;
+  (dur: 0.25, instrument: \windy, degree: Pseq([1, 2], inf)) +> \windy;
+  //: Test in pattern;
+  (dur: Prand([Pn(0.05, 10), Pn(0.5, 3)], inf), instrument: \windy, degree: Pseq([1, 2], inf)) +> \windy;
+  //: Test in pattern;
+  (dur: Prand([Pn(0.05, 10), Prand([0.1, 0.2, 0.4], 10), Pn(0.5, 3)], inf), instrument: \windy, degree: Pseq([1, 2], inf)) +> \windy;
+  //: Test in pattern;
+  (dur: Prand([Pn(0.05, 10), Prand([0.1, 0.2, 0.4], 10), Pn(0.5, 3)], inf), instrument: \windy) +> \windy2;
+  //:
+  (freq: 4000) +> \windy2;
+  //:
+  (instrument: \default) +> \windy2;
+  //:
+  (instrument: Prand([\windy, \default], inf)) +> \windy2;
+  //:
+#+END_SRC
+*** Simple Data Sonification
+*** Sensors
+** Βιβλιογραφία                                                      :ATTACH:
+   :PROPERTIES:
+   :ID:       4E3FA889-81C8-4A2B-808D-CA8BEBD62AD9
+   :Attachments: Tom%20Igoe,%20Dan%20O'Sullivan%20Physical%20Computing_%20Sensing%20and%20Controlling%20the%20Physical%20World%20with%20Computers%20%202004.pdf
+   :END:
+
+
+Igoe, T., and Sullivan, D. Physical Computing: Sensing and Controlling the Physical World with Computers.
+** Ιστογραφία
