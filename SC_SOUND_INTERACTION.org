@@ -165,13 +165,47 @@ emacs &
   Buffer.names.first.b.play;
   //:
   \buffers.window({ | w |
+      var bufferNames, index;
       w.view.layout = VLayout(
           ListView()
+          .selectionMode_(\extended)
+          .action_({ | me |
+              index = me.value;
+              bufferNames do: { | bn, i |
+                  if (Player.named(bn).isPlaying) {
+                      if (index == i) {
+                          me.selectedStringColor = Color.red;
+                      }{
+                          me.selectedStringColor = Color.white;
+                      }
+                  }
+              }
+          })
           .enterKeyAction_({ | me |
               Buffer toggle: me.items[me.value];
           })
           .addNotifier(Buffer, \buffers, { | notification |
-              notification.listener.items = Buffer.names;
+              {
+                  index = notification.listener.value;
+                  bufferNames = Buffer.names;
+                  notification.listener.items = bufferNames;
+                  notification.listener.value = index;
+                  notification.listener.colors = bufferNames
+                  .collect({ | bn, i |
+                      if (Player.named(bn).isPlaying) {
+                          if (index == i) {
+                              notification.listener.selectedStringColor = Color.red;
+                          };
+                          Color.red
+                      }{
+                          if (index == i) {
+                              notification.listener.selectedStringColor = Color.white;
+                          };
+                          Color.white
+
+                      }
+                  })
+              }.defer;
           })
       );
       Buffer.changed(\buffers)
