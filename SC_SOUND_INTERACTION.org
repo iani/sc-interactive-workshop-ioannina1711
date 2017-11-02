@@ -213,8 +213,34 @@ emacs &
   //:
 
 #+END_SRC
-
-*** Granulation
+*** Granulation and Concatenation
+**** Play Arbitrary Segments from buffer
+#+BEGIN_SRC sclang
+  //: Fill a buffer with a test signal
+  \sinetest.alloc(5);
+  \sinetest.b.play;
+  //:
+  {
+      var src;
+      src = SinOsc.ar(Line.ar(400, 1200, 5, doneAction: 2), 0, 0.1);
+      RecordBuf.ar(src, \sinetest.b.bufnum, doneAction: 2);
+  } +> \fillSine;
+  //:
+  \sinetest.b.play;
+  //: Test playback sections at random from buffer;
+  // first the whole buffer;
+  {
+      PlayBuf.ar(1, \sinetest.b.bufnum, loop: 0, doneAction: 2)
+  } +> \testSine;
+  //: Now only a segment
+  // Trying first with line
+  {
+      var trig;
+      BufRd.ar(1, \sinetest.b.bufnum,
+          Line.ar(0, Server.default.sampleRate * 1, 1, doneAction: 2)
+      );
+  } +> \testSine;
+#+END_SRC
 
 *** Live Coding Example (ported from Youtube / Scratchy)
     :PROPERTIES:
