@@ -232,6 +232,55 @@ emacs &
   {
       PlayBuf.ar(1, \sinetest.b.bufnum, loop: 0, doneAction: 2)
   } +> \testSine;
+  //: Test playback sections at random from buffer;
+  // Retrigger with constant rate using trigger argment in PlayBuf
+  {
+      PlayBuf.ar(1, \sinetest.b.bufnum,
+          trigger: \trigger.kr(1)
+          loop: 0, doneAction: 2)
+  } +> \testSine;
+  //: Test playback sections at random from buffer;
+  // Retrigger with constant rate using trigger argment in PlayBuf
+  // Use Changed.kr to be able to re-trigger at random.
+  { | trigctl = 0 |
+      PlayBuf.ar(1, \sinetest.b.bufnum,
+          trigger: Changed.kr(trigctl)
+          loop: 0, doneAction: 0)
+  } +> \testSine;
+  //:
+  ~trigctl =42;
+  //: Use a pattern to trigger
+  (dur: 1, trigctl: Pseries(0, 1, inf)) *> \trigpat;
+  //:
+  (dur: 0.1, trigctl: Pseries(0, 1, inf)) *> \trigpat;
+  //: Test playback sections at random from buffer;
+  // Retrigger with constant rate using trigger argment in PlayBuf
+  // Use Changed.kr to be able to re-trigger at random, and change the rate.
+  { | trigctl = 0 |
+      PlayBuf.ar(1, \sinetest.b.bufnum,
+          rate: \rate.kr(1),
+          trigger: Changed.kr(trigctl)
+          loop: 0, doneAction: 0)
+  } +> \testSine;
+  //:
+  (dur: 0.5, rate: Pseq([1, 0.2], inf), trigctl: Pseries(0, 1, inf)) *> \trigpat;
+  //: Test playback sections at random from buffer;
+  // Retrigger with constant rate using trigger argment in PlayBuf
+  // Use Changed.kr to be able to re-trigger at random, and change the rate.
+  // and also play from different segments
+  { | trigctl = 0 |
+      PlayBuf.ar(1, \birds.b, //  \sinetest.b.bufnum,
+          rate: \rate.kr(1),
+          startPos: \startPos.kr(0),
+          trigger: Changed.kr(trigctl)
+          loop: 0, doneAction: 0)
+  } +> \testSine;
+  //:
+  (dur: Pbrown(0.01, 3, 0.1, inf), rate: Pbrown(0.2, 5, 0.1, inf),
+   startPos: Pwhite(0, 5 * 48000, inf),
+   trigctl: Pseries(0, 1, inf)) *> \trigpat;
+  //:
+  (dur: 0.5, rate: Pseq([1, 2], inf), trigctl: Pseries(0, 1, inf)) *> \trigpat;
   //: Now only a segment
   // Trying first with line
   {
