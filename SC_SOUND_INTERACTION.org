@@ -2,24 +2,6 @@
   :PROPERTIES:
   :DATE:     <2017-10-28 Σαβ 16:01>
   :END:
-** Εισαγωγή
-** Στόχοι και περιεχόμενα του Σεμιναρίου
-** Τι είναι το RPI
-** Τι είναι οι αισθητήρες και πως δουλεύουμε με αυτούς
-*** Τι είναι αισθητήρες;
-
-Αισθητήρας είναι μια συσκευή που μετρά φυσικά μεγέθη από το περιβάλλον ετσι ώστε να τα μεταδώσει σαν δεδομένα σε ένα σύστημα επεξεργασίας πληροφορίας.  Μπορούμε να πούμε ότι οι αισθητήρες είναι για τις μήχανές όπως τους υπολογιστές ότι είναι τα αισθητήρια όργανα για τον άνθρωπό ή τα ζώα.
-
-Παραδειγματα;
-
-- Αισθητήρας;
-
-
-*** Γιατί αισθητήρες;
-
-
-
-Physical Computing
 ** Practical Demonstration
 *** Get started
 
@@ -49,8 +31,16 @@ emacs &
   //: Simple play of a function as synth
   // Store the synth in variable a in order to access it later
   a = { WhiteNoise.ar(0.1) }.play;
+  //: Simple play of a function as synth
+  // Store the synth in variable a in order to access it later
+  a = {
+          Out.ar(\out.kr(0),
+                  WhiteNoise.ar(0.1))
+  }.play;
   //: Free the synth stored in a (Means: stop it)
   a.free;
+  //: Free the synth stored in a (Means: stop it)
+  a.set(\out, 1);
   //: Play a function with controls - to change the sound later.
   a = { | freq = 440 | SinOsc.ar(freq, 0, 0.1) }.play;
   //: Change the frequency control's value
@@ -59,6 +49,55 @@ emacs &
   b =  { LFSaw.ar(\freq.kr(440), 0, 0.1) }.play;
   //: Change the frequency control's value
   b.set(\freq, 1000);
+  //:
+  { LFSaw.ar(\freq.kr(440), 0, 0.1) } +> \b;
+  //: Routine with embedded loop
+  { { ~freq = 200 rrand: 440; 0.1.wait }.loop } *> \b;
+  //: **> operator embeds function as loop in routine:
+  { ~freq = 200 rrand: 440; 0.01.exprand(1).wait } **> \b;
+  //: Use a pattern instead of a routine for the same effect:
+  (freq: Pwhite(200, 400, inf), dur: { 0.01.exprand(1) }) *>.b \f;
+  //:
+  { WhiteNoise.ar(0.1) } +> \chantest;
+  //:
+  { SinOsc.ar(
+          LFPulse.kr(\rate.kr(5)).range(
+                  \lo.kr(400),
+                  \hi.kr(500)
+          ),
+          0,
+          0.1
+  ) } +> \chantest;
+  //:
+  ~hi = 600;
+  //:
+  ~rate = 0.5;
+  //:
+
+  ~out = 1;
+  //:
+  {
+          loop {
+                  (degree: (0..20).choose).play;
+                  ~out = 2.rand;
+                  ~out.postln;
+                  0.1.exprand(1.5).wait;
+          }
+
+  }.fork;
+  //:
+  () +> \pat;
+  //:
+  (dur: 0.1) +> \pat;
+  //:
+  (dur: Pwhite(0.01, 0.5, inf)) +> \pat;
+  //:
+  (degree: Pseq((0..7), inf)) +> \pat;
+  //:
+  (degree: Pwhite(0, 7, inf)) +> \pat;
+  //:
+  (degree: Pbrown(0, 7, 3)) +> \pat;
+  //:
 #+END_SRC
 **** Discussion: storing sound processes in variables
      :PROPERTIES:
@@ -71,15 +110,37 @@ emacs &
 
 *** First sounds using sc-hacks
 
+**** First steps
+ #+BEGIN_SRC sclang
+   { WhiteNoise.ar(0.1) } +> \test;
+   //:
+   \test.stop;
+   //: One can replace one synth with another one
+   { WhiteNoise.ar(0.1) } +> \test;
+   //:
+   { GrayNoise.ar(0.1) } +> \test;
+ #+END_SRC
+
+**** Sound check
+     :PROPERTIES:
+     :DATE:     <2017-11-26 Sun 13:06>
+     :END:
+
+We used this to check our stereo setup when preparing our workshop on site in Ioannina.
+
 #+BEGIN_SRC sclang
-  { WhiteNoise.ar(0.1) } +> \test;
-  //:
-  \test.stop;
-  //: One can replace one synth with another one
-  { WhiteNoise.ar(0.1) } +> \test;
-  //:
-  { GrayNoise.ar(0.1) } +> \test;
+
+  {
+          [
+                  WhiteNoise.ar(Decay.kr(Impulse.kr(\leftrate.kr(1)), \leftdecay.kr(0.1)))
+                  ,* \leftamp.kr(0.1),
+                  WhiteNoise.ar(Decay.kr(Impulse.kr(\rightrate.kr(2), 0.5),
+                          \rightdecay.kr(0.3)))
+                  ,* \rightamp.kr(0.1),
+          ]
+  } +> \stereoSoundCheck;
 #+END_SRC
+
 *** Cross-Fade between successive synths
 
 #+BEGIN_SRC sclang
@@ -391,3 +452,47 @@ emacs &
 
 Igoe, T., and Sullivan, D. Physical Computing: Sensing and Controlling the Physical World with Computers.
 ** Ιστογραφία
+** Link for rslsync sharing of sound folder
+   :PROPERTIES:
+   :DATE:     <2017-11-03 Παρ 11:49>
+   :END:
+
+https://link.resilio.com/#f=sounds-ioannina171104&sz=38E6&t=1&s=CJYDHHI3LAMK5PSJSMU275UW5L54FY5N&i=C4A7WMVB2FFCKZJ5T7G54AIUZI3SL7AGF&e=1509961704&v=2.5
+* Workshop Minutes
+  :PROPERTIES:
+  :DATE:     <2017-11-26 Sun 12:38>
+  :END:
+** Day 1 (Saturday, November 24, 2017)
+   :PROPERTIES:
+   :DATE:     <2017-11-26 Sun 12:38>
+   :END:
+
+Minutes by Nelly Pasakou
+
+171125
+
+*** GitHub
+Programmers use tools. GitHub is one of those tools.
+Archives. Necessary for coding.
+Group project becomes easier.
+Linus Torvalds
+Code is accessible by everybody, at anytime, online.
+Works with Repositories - can be documentation, library, etc.
+Atom, Electron, GitHub
+
+You have access, download, and edit, code created by other people.
+How to access to that code?
+ex:	github.com/iani - sc-hacks - Clone with HTTPS -
+	in emacs: Desktop git clone (link)
+
+Learn to work with Linux's Terminal.
+ ( http://linuxcommand.org/lc3_learning_the_shell.php )
+vs Ableton. Pop culture based.
+If in need of interacton, Ableton can no longer meet our needs
+= Linux Terminal, open source.
+
+*** Live Coding
+Sc-hacks: Zannos' personal work through the years, in SuperCollider.
+
+Emacs, SuperCollider: get Notes for Workshop
+Working with Functions. Parameters.
